@@ -7,4 +7,11 @@ Whois shows barely nothing since they got that Whoisprivacy up and running. Expi
 Using Google dork I found http://www.bancocn.com/assets/ , http://www.bancocn.com/classes/ exposed.<!--Looks like its outta scope but I sent 'em a message anyways-->  
 
 [//]: # (Shall we access the website ?!)
-Using a small list on dirb I get:
+Using a small list from dirb I found the following directories/files:
+403 .htaccess
+403 .htpasswd
+200 admin/
+200 assets/
+200 images/
+200 index.php
+200 robots.txt

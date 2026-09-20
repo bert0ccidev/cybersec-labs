@@ -8,10 +8,10 @@ Using Google dork I found http://www.bancocn.com/assets/ , http://www.bancocn.co
 
 [//]: # (Shall we access the website ?!)
 Using a small list from dirb I found the following directories/files:
-403 .htaccess
-403 .htpasswd
-200 admin/
-200 assets/
-200 images/
-200 index.php
-200 robots.txt
+403 .htaccess  
+403 .htpasswd  
+200 admin/  
+200 assets/  
+200 images/  
+200 index.php  
+200 robots.txt  

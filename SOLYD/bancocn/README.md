@@ -13,13 +13,13 @@ Using Google Dorks, I found http://www.bancocn.com/assets/ and http://www.bancoc
 
 <!-- Shall we access the website?! -->
 Using a small list from dirb, I found the following directories and files: 
-403 .htaccess 
-403 .htpasswd 
-200 admin/ - Secret login panel 
-200 assets/ - Directory listing 
-200 images/ - Directory listing 
-200 robots.txt - Also exposes admin/ 
-200 index.php - Let's explore its functionality 
+403 .htaccess  
+403 .htpasswd  
+200 admin/ - Secret login panel  
+200 assets/ - Directory listing  
+200 images/ - Directory listing  
+200 robots.txt - Also exposes admin/  
+200 index.php - Let's explore its functionality  
 <!-- Pages assets/, images/, and classes/ look to be filtered client-side content, but I'll take a look at them soon -->
 
 **Found URL parameter ?id=1 while navigating through the site:** 
@@ -68,6 +68,6 @@ Output returned on screen:
 
 At this point, we have web shell access under the context of the `www-data` service account, enabling command execution across the server (e.g., system enumeration, extracting application configs, or staging further local exploits). 
 
-This machine is powered by Solyd OffSec and is actually broken. A few years ago, I was able to get a reverse shell, retrieve server credentials for other machines on this network, and perform PrivEsc through a CVE in the installed sudo version. 
-<!-- It was hours of my time until I got frustrated and finally decided to rewatch their course, only to realize my answer was correct. Many other students were having the same problem as me and they didn't even care to answer... -->
-Me and other students have already sent tickets to their support staff, but at the moment, this is the maximum access we can get.
+This machine is powered by Solyd OffSec and is actually broken. I even tunneled an ngrok session to a local netcat listener to catch a reverse shell, but it couldn't be established due to the target environment constraints. A few years ago, I was able to get a reverse shell, retrieve server credentials for other machines on this network, pivot, and perform PrivEsc through a CVE in the installed sudo version. 
+<!-- It was hours of my time until I got frustrated and finally decided to rewatch their course, only to realize my answer was correct. Many other students were having the same problem as me, and they didn't even care to answer...-->
+Me and other students have already sent tickets to their support staff, but at the moment, this web shell access is the maximum access we can get.

